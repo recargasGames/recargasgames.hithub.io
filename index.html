@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RECARGAS GAMES | Oficial</title>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <style>
+        :root { 
+            --bg: #000; --card: #0a1120; --accent: #0046be; --blue-light: #0070f3; 
+            --text: #fff; --green: #25d366; --gradient: linear-gradient(90deg, #0070f3, #2dd4bf);
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; padding-bottom: 120px; }
+        .container { max-width: 450px; margin: 0 auto; }
+        
+        header { text-align: center; padding: 10px 0; }
+        header h1 { font-size: 1.8rem; font-style: italic; margin: 0; }
+        header h1 span { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
+
+        .game-selector { display: flex; gap: 10px; margin: 15px 0; }
+        .game-btn { flex: 1; padding: 12px; border-radius: 10px; border: 2px solid #1e293b; background: var(--card); color: #fff; font-weight: bold; cursor: pointer; }
+        .game-btn.active { border-color: var(--blue-light); background: var(--accent); }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .card { background: var(--card); padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #1e293b; cursor: pointer; }
+        .card.selected { border-color: var(--blue-light); background: rgba(0, 70, 190, 0.2); }
+        
+        /* Pago Móvil Copiable */
+        .pago-info { background: #111; padding: 15px; border-radius: 15px; border: 1px dashed var(--accent); margin: 15px 0; font-size: 0.85rem; }
+        .copy-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; cursor: pointer; }
+        .copy-item:last-child { border: none; }
+
+        .form-box { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #1e293b; }
+        input { width: 100%; padding: 14px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #1e293b; background: #000; color: #fff; box-sizing: border-box; outline: none; }
+        .btn-action { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        
+        /* Botones Flotantes en la esquina inferior derecha */
+        .btn-float-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 100; }
+        .btn-float { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; border: none; }
+        .btn-soporte { background: var(--green); color: white; }
+        .btn-menu { background: var(--blue-light); color: white; font-size: 20px; }
+
+        /* Modal Historial */
+        #history-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; padding: 20px; box-sizing: border-box; align-items: center; justify-content: center; }
+        .modal-content { background: var(--card); border-radius: 20px; padding: 20px; width: 100%; max-width: 400px; max-height: 70vh; overflow-y: auto; border: 1px solid var(--blue-light); }
+        .history-item { padding: 12px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; font-size: 0.9rem; }
+
+        .tracking-box { margin-top: 20px; padding: 25px; background: #0a1120; border-radius: 20px; display: none; text-align: center; border: 2px solid var(--blue-light); }
+        #toast { position: fixed; bottom: 150px; left: 50%; transform: translateX(-50%); background: var(--blue-light); color: white; padding: 8px 20px; border-radius: 20px; font-size: 0.8rem; display: none; z-index: 300; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header><h1>RECARGAS <span>GAMES</span></h1></header>
+
+    <div id="main-content">
+        <div class="game-selector">
+            <button class="game-btn active" onclick="switchGame('ff', this)">FREE FIRE</button>
+            <button class="game-btn" onclick="switchGame('bs', this)">BLOCK STRIKE</button>
+        </div>
+
+        <div id="section-ff" class="content-section">
+            <h4 style="color:gray; margin: 5px 0;">Diamantes</h4>
+            <div class="grid" id="grid-ff-diamonds"></div>
+            <h4 style="color:gray; margin: 15px 0 5px 0;">Tarjetas y Pases</h4>
+            <div class="grid" id="grid-ff-passes"></div>
+        </div>
+
+        <div id="section-bs" class="content-section" style="display:none;">
+            <h4 style="color:gray; margin: 5px 0;">Oro Block Strike</h4>
+            <div class="grid" id="grid-bs-gold"></div>
+        </div>
+
+        <div class="pago-info">
+            <div class="copy-item" onclick="copyText('0102')"><span>Banco:</span> <strong>BDV (0102)</strong></div>
+            <div class="copy-item" onclick="copyText('32824869')"><span>Cédula:</span> <strong>32.824.869</strong></div>
+            <div class="copy-item" onclick="copyText('04228242411')"><span>Teléfono:</span> <strong>0422-8242411</strong></div>
+            <small style="display:block; text-align:center; color:var(--blue-light); margin-top:8px;">Toca los datos para copiar</small>
+        </div>
+
+        <div class="form-box" id="order-form">
+            <div class="total-display" style="text-align:center; margin-bottom:15px;">
+                <span style="font-size: 1.8rem; font-weight: 900;" id="res-bs">Bs 0.00</span><br>
+                <span id="res-usd" style="color:var(--blue-light); font-weight: bold;">$ 0.00</span>
+            </div>
+            <input type="text" id="player-id" placeholder="ID Jugador / Usuario">
+            <input type="text" id="ref-pago" placeholder="Referencia de Pago">
+            <button class="btn-action" onclick="createOrder()">ENVIAR RECARGA</button>
+        </div>
+    </div>
+
+    <div id="tracking-area" class="tracking-box"></div>
+</div>
+
+<div class="btn-float-container">
+    <button class="btn-float btn-menu" onclick="openHistory()">☰</button>
+    <a href="https://wa.me/584228242411" class="btn-float btn-soporte" target="_blank">
+        <svg width="30" height="30" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
+    </a>
+</div>
+
+<div id="history-modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h2 style="margin:0 0 15px 0; color:var(--blue-light);">Mis Recargas</h2>
+        <div id="history-list"></div>
+        <button onclick="document.getElementById('history-modal').style.display='none'" style="width:100%; margin-top:20px; padding:12px; border-radius:10px; background:var(--accent); color:white; border:none; font-weight:bold;">Cerrar</button>
+    </div>
+</div>
+
+<div id="toast">Copiado al portapapeles</div>
+
+<script>
+    const TASA = 650;
+    const firebaseConfig = {
+        apiKey: "AIzaSyCGkhRz8Go1mc4EEKWfs_t7WUdPTV-ELcY",
+        authDomain: "recargas-gamers-bcdaa.firebaseapp.com",
+        projectId: "recargas-gamers-bcdaa",
+        databaseURL: "https://recargas-gamers-bcdaa-default-rtdb.firebaseio.com/",
+        storageBucket: "recargas-gamers-bcdaa.firebasestorage.app",
+        messagingSenderId: "322658892724",
+        appId: "1:322658892724:web:a60d1c9c1b9825f72d50e1"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // LISTA DE PRECIOS COMPLETA
+    const ffDiamonds = [{n:"110💎",p:0.97},{n:"220💎",p:1.96},{n:"341💎",p:3.20},{n:"572💎",p:4.89},{n:"1166💎",p:9},{n:"2398💎",p:19},{n:"6160💎",p:48}];
+    const ffPasses = [
+        {n:"T. Semanal básica",p:0.73},{n:"T. Semanal",p:2.50},{n:"T. Mensual",p:11},
+        {n:"Pasé booyah",p:3.50},{n:"Nivel 6",p:0.30},{n:"Nivel 10",p:0.60},
+        {n:"Nivel 15",p:0.60},{n:"Nivel 20",p:0.60},{n:"Nivel 25",p:0.60},{n:"Nivel 30",p:0.95}
+    ];
+    const bsGold = [{n:"100 Oro",p:1.00},{n:"500 Oro",p:4.50},{n:"1000 Oro",p:8.00}];
+
+    let currentGame = "Free Fire", selectedItem = "", selectedPrice = 0;
+
+    function render(data, id) {
+        const div = document.getElementById(id);
+        data.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `<strong>${item.n}</strong><br><small>$${item.p.toFixed(2)}</small>`;
+            card.onclick = () => {
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedItem = item.n; selectedPrice = item.p;
+                document.getElementById('res-bs').innerText = `Bs ${(selectedPrice * TASA).toLocaleString('es-VE',{minimumFractionDigits:2})}`;
+                document.getElementById('res-usd').innerText = `$ ${selectedPrice.toFixed(2)}`;
+            };
+            div.appendChild(card);
+        });
+    }
+
+    render(ffDiamonds,'grid-ff-diamonds'); render(ffPasses,'grid-ff-passes'); render(bsGold,'grid-bs-gold');
+
+    function switchGame(g, b) {
+        document.querySelectorAll('.game-btn').forEach(btn => btn.classList.remove('active'));
+        b.classList.add('active');
+        currentGame = (g === 'ff') ? "Free Fire" : "Block Strike";
+        document.getElementById('section-ff').style.display = (g === 'ff') ? 'block' : 'none';
+        document.getElementById('section-bs').style.display = (g === 'bs') ? 'block' : 'none';
+    }
+
+    function copyText(txt) {
+        navigator.clipboard.writeText(txt);
+        const t = document.getElementById('toast');
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 2000);
+    }
+
+    function openHistory() {
+        document.getElementById('history-modal').style.display = 'flex';
+        const list = document.getElementById('history-list');
+        const myOrders = JSON.parse(localStorage.getItem('myOrders') || "[]");
+        if(myOrders.length === 0) return list.innerHTML = "<p style='color:gray;text-align:center;'>Aún no tienes recargas.</p>";
+        list.innerHTML = "";
+        myOrders.reverse().forEach(id => {
+            db.ref('pedidos/' + id).once('value', s => {
+                const d = s.val();
+                if(d) list.innerHTML += `<div class="history-item"><span>${d.item}</span><strong style="color:var(--blue-light)">${d.status}</strong></div>`;
+            });
+        });
+    }
+
+    function createOrder() {
+        const id = document.getElementById('player-id').value, ref = document.getElementById('ref-pago').value;
+        if(!id || !ref || !selectedItem) return alert("Por favor selecciona un producto y llena los datos.");
+        const orderId = "REC-" + Date.now().toString().slice(-5);
+        db.ref('pedidos/' + orderId).set({ juego: currentGame, id, ref, item: selectedItem, status: "Pendiente", time: Date.now() })
+        .then(() => {
+            localStorage.setItem('activeOrder', orderId);
+            let orders = JSON.parse(localStorage.getItem('myOrders') || "[]");
+            orders.push(orderId);
+            localStorage.setItem('myOrders', JSON.stringify(orders));
+            showTracking(orderId);
+        });
+    }
+
+    function showTracking(orderId) {
+        document.getElementById('main-content').style.display = 'none';
+        const area = document.getElementById('tracking-area');
+        area.style.display = 'block';
+        db.ref('pedidos/' + orderId).on('value', s => {
+            const d = s.val();
+            if(!d) return location.reload();
+            area.innerHTML = `<h3>ESTADO DE RECARGA</h3><div style="font-size:1.8rem; font-weight:bold; color:var(--green); margin:15px 0;">${d.status}</div><p style="color:gray; font-size:0.8rem;">ID: ${orderId}</p>`;
+            if(d.status === "COMPLETADA") setTimeout(() => { localStorage.removeItem('activeOrder'); location.reload(); }, 5000);
+        });
+    }
+
+    window.onload = () => {
+        const active = localStorage.getItem('activeOrder');
+        if(active) showTracking(active);
+    };
+</script>
+</body>
+</html>

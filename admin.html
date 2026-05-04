@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin | RecargasGames</title>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #2dd4bf;
+            --pending: #fbbf24;
+            --completed: #4ade80;
+            --text: #f8fafc;
+        }
+
+        body { background-color: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 20px; }
+        .header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        
+        /* Estadísticas */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .stat-card { background: var(--card-bg); padding: 15px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+        .stat-number { display: block; font-size: 1.8rem; font-weight: bold; color: var(--accent); }
+        
+        /* Tarjetas de Pedido */
+        .order-card { 
+            background: var(--card-bg); 
+            border-radius: 15px; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-left: 5px solid var(--accent); 
+        }
+        .order-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+        .status-pendiente { background: rgba(251, 191, 36, 0.2); color: var(--pending); }
+        .status-verificando { background: rgba(45, 212, 191, 0.2); color: var(--accent); }
+        .status-completada { background: rgba(74, 222, 128, 0.2); color: var(--completed); }
+
+        .info-row { margin: 5px 0; font-size: 0.9rem; }
+        .info-row strong { color: var(--accent); }
+
+        .action-btns { display: flex; gap: 8px; margin-top: 15px; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #000; }
+        .btn-p { background: var(--pending); }
+        .btn-v { background: var(--accent); }
+        .btn-c { background: var(--completed); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🛍️ Gestión de Ventas</h1>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-number" id="stat-total">0</span>
+            <small>Total Pedidos</small>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="stat-pendientes">0</span>
+            <small>Pendientes</small>
+        </div>
+    </div>
+
+    <div id="orders-container">
+        </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCGkhRz8Go1mc4EEKWfs_t7WUdPTV-ELcY",
+            authDomain: "recargas-gamers-bcdaa.firebaseapp.com",
+            projectId: "recargas-gamers-bcdaa",
+            databaseURL: "https://recargas-gamers-bcdaa-default-rtdb.firebaseio.com/",
+            storageBucket: "recargas-gamers-bcdaa.firebasestorage.app",
+            messagingSenderId: "322658892724",
+            appId: "1:322658892724:web:a60d1c9c1b9825f72d50e1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Escuchar pedidos (Ordenados por tiempo)
+        db.ref('pedidos').on('value', (snapshot) => {
+            const container = document.getElementById('orders-container');
+            container.innerHTML = "";
+            let total = 0, pendientes = 0;
+            
+            let orders = [];
+            snapshot.forEach(child => {
+                orders.push({ key: child.key, ...child.val() });
+            });
+
+            // ORDENAR: Los más nuevos arriba
+            orders.reverse();
+
+            orders.forEach(data => {
+                total++;
+                if(data.status !== "COMPLETADA") pendientes++;
+
+                const statusClass = data.status === "COMPLETADA" ? "status-completada" : 
+                                  data.status === "Verificando" ? "status-verificando" : "status-pendiente";
+
+                container.innerHTML += `
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span style="font-weight:bold; color:#94a3b8;">#${data.key}</span>
+                            <span class="status-badge ${statusClass}">${data.status.toUpperCase()}</span>
+                        </div>
+                        <div class="info-row">Juego: <strong>${data.juego || 'Free Fire'}</strong></div>
+                        <div class="info-row">Item: <strong>${data.item}</strong></div>
+                        <div class="info-row">ID: <strong>${data.id}</strong></div>
+                        <div class="info-row">Ref: <strong>${data.ref}</strong></div>
+                        
+                        <div class="action-btns">
+                            <button class="btn btn-p" onclick="updateState('${data.key}', 'Pendiente')">Pendiente</button>
+                            <button class="btn btn-v" onclick="updateState('${data.key}', 'Verificando')">Verificado</button>
+                            <button class="btn btn-c" onclick="updateState('${data.key}', 'COMPLETADA')">Completar</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-pendientes').innerText = pendientes;
+        });
+
+        function updateState(key, newState) {
+            db.ref('pedidos/' + key).update({ status: newState })
+              .then(() => console.log("Estado actualizado"))
+              .catch(e => alert("Error: " + e.message));
+        }
+    </script>
+</body>
+</html>
